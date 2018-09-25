@@ -87,7 +87,7 @@ Create a new file `response.py` and write the code for a class that will hold al
 ```Python
 # server.py 
 
-if request.path == '/':
+if request.path == '/hello':
   view = Template(get_view('index'))
   body_response = view.render()
 
@@ -109,6 +109,8 @@ Create a file `router.py` and add the following code.
 
 ```Python
 # router.py 
+import re 
+
 class Router:
  
   routes = []
@@ -124,7 +126,7 @@ class Router:
   @classmethod
   def process(self, request):
     for route in self.routes:
-      if route['path'] == request.path and route['method'].lower() == request.method.lower():
+      if re.search(route['path'], request.path)and route['method'].lower() == request.method.lower():
         return route['process']()
       else 
         return 'HTTP/1.1 404 Not Found \r\n'
@@ -166,7 +168,7 @@ add_to_routes('/', 'get', index)
 
 This might make more sense when we see the implementation in a little bit. First, let's quickly go over our last method in `Router`. 
 
-`process` is in charge of figuring out what to do with a request. When it receives a request, it loops through the routes for a match. If it finds one it runs the function saved under `route['process']` (the code that needs to be run to generate the response). If it doesn't find a match, it returns a `404` not found response. 
+`process` is in charge of figuring out what to do with a request. When it receives a request, it loops through the routes and uses regex to match the request path with one of the routes saved in our `routes` class variable. If it finds one it runs the function saved under `route['process']` (the code that needs to be run to generate the response). If it doesn't find a match, it returns a `404` not found response. 
 
 That was a lot. If you're confused, don't worry. Read through the rest of the release and then feel free to go back and play with the code to get a better understanding of how it works. 
 
@@ -181,7 +183,7 @@ from utilities import get_view
 from response import Response
 import datetime
 
-@Router.route('/')
+@Router.route('/hello')
 def index():
   view = Template(get_view('index'))
   body_response = view.render()
