@@ -101,7 +101,7 @@ if request.path == '/hello':
 
 ## Release 3 - Router 
 
-This release will challenge you if you aren't comfortable with decorators in Python. This article is a great reference: [Decorators In Python: What You Need To Know](https://timber.io/blog/decorators-in-python/)
+This release will challenge you if you aren't comfortable with decorators in Python. These two articles are a great reference:[Primer on Python Decorators](https://realpython.com/primer-on-python-decorators/) and [Decorators In Python: What You Need To Know](https://timber.io/blog/decorators-in-python/)
 
 Don't get discouraged if decorators don't make sense right away. Hopefully working with them here will help you get a handle on how they work. They're implementation here is based the way [Flask](http://flask.pocoo.org/docs/0.12/quickstart/) handles routing, though pared down quite a bit. You may not end up using decorators that much when you're just starting out, but you will certainly see them around, and it will be good to have an idea how they work. 
 
