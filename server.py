@@ -1,44 +1,20 @@
-from request import Request
 import socket
 import datetime
+from request import Request
 
-# create a server listening on port 8888
-HOST, PORT = '', 9292
+def build_html_response(text_body):
+  html_body = f'<html><head><title>An Example Page</title></head><body>{text_body}</body></html>'
+  return f"HTTP/1.1 200 OK\r\nContent-Type:text/html\r\nContent-Length:{len(html_body)}\r\n\r\n{html_body}"
 
-listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-listen_socket.bind((HOST, PORT))
-print('Waiting For Connection...')
-listen_socket.listen(1)
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(('localhost', 9291))
 
 while True:
-
-    client_connection, client_address = listen_socket.accept()
-    # we listen for a request. Then we need to convert it from bytes to a string with decode.
-    request_text = client_connection.recv(1024).decode('utf-8')
-    request = Request(request_text)
-
-    if request.path == '/':
-        protocol = 'HTTP/1.1 200 OK\r\n'
-        body_response = '<html><body><h1>Hello World!</h1></body></html>'
-        content_type = 'Content Type: text/html\r\n'
-        content_length = f'Content Length: {len(body_response)}\r\n'
-
-        client_connection.send(protocol.encode())
-        client_connection.send(content_type.encode())
-        client_connection.send(content_length.encode())
-        client_connection.send('\r\n'.encode())
-        client_connection.send(body_response.encode())
-
-    elif request.path == '/time':
-        protocol = 'HTTP/1.1 200 OK\r\n'
-        body_response = f'<html><body><h1>{ datetime.datetime.now() }</h1></body></html>'
-        content_type = 'Content Type: text/html\r\n'
-        content_length = f'Content Length: {len(body_response)}\r\n'
-
-        client_connection.send(protocol.encode())
-        client_connection.send(content_type.encode())
-        client_connection.send(content_length.encode())
-        client_connection.send('\r\n'.encode())
-        client_connection.send(body_response.encode())
-
+    server.listen()
+    client_connection, _client_address = server.accept()
+    client_request = Request(client_connection)
+    if client_request.parsed_request['urn'] == '/':
+        client_connection.send(build_html_response('Hello World').encode())
+    elif client_request.parsed_request['urn'] == '/time':
+        client_connection.send(build_html_response(datetime.datetime.now()).encode())
     client_connection.close()
