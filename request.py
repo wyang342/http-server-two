@@ -1,21 +1,14 @@
 class Request:
+    def __init__(self, request_text):
+      self.parse_request(request_text.recv(1024).decode('utf-8').split('\r\n'))
 
-  def __init__(self, request_text):
-    self.request = request_text.split('\r\n')
-    self.request_line = self.request.pop(0).split(' ')
-    self.headers = self.parse_headers()
-    self.method = self.request_line[0]
-    self.path = self.request_line[1]
-    self.url = self.headers['host']
-
-  def parse_headers(self):
-    request = self.request
-    headers = {}
-
-    for header in request:
-      seperated_header_value = header.split(': ')
-      if len(seperated_header_value) > 1:
-        headers[seperated_header_value[0].lower()] = seperated_header_value[1]
-    return headers
+    def parse_request(self, request_as_list):
+      self.parsed_request = {
+        'method': request_as_list[0].split(' ')[0],
+        'urn': request_as_list[0].split(' ')[1],
+      }
+      for row in request_as_list[1:-2]:
+        split_list = row.split(': ')
+        self.parsed_request[split_list[0]] = split_list[1]
 
 
