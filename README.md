@@ -113,12 +113,10 @@ Don't get discouraged if decorators don't make sense right away. Hopefully worki
 Create a file `classes/router.py` and add the following code: 
 
 ```Python
-import re
-
 class Router:
   routes = []
 
-  @classmethod 
+  @classmethod
   def route(self, path, method='get'):
     def add_to_routes(function):
       route = {'path': path, 'function': function, 'method': method}
@@ -127,33 +125,31 @@ class Router:
 
   @classmethod
   def process(self, request):
+    parsed_request = request.parsed_request
     for route in self.routes:
-      if re.search(route['path'], request.path)and route['method'].lower() == request.method.lower():
+      if route['path'] == parsed_request['urn'] and route['method'].lower() == parsed_request['method'].lower():
         return route['function']()
-      else 
-        return 'HTTP/1.1 404 Not Found \r\n'
+    return 'HTTP/1.1 404 Not Found \r\n'
 ```
 
 First, we have our class which will handle all the routes at the class level instead of at the instance level. Then, we create a class variable `routes` that will hold all of the routes we want our server to accept. 
 
-Next we have our `route` function. This function is responsible for loading routes into our `routes` class variable. We will call this function every time we want to **create** a new route. Inside of `route`, we define another function `add_to_routes` which adds all the necessary route information (as a dictionary) to the class variable `routes`.
+Next we have our `route` class method. This is responsible for loading routes into our `routes` class variable. We will call this function every time we want to **create** a new route. Inside of `route` is another function, `add_to_routes`, which adds all the necessary route information (as a dictionary) to the `routes` class variable. Don't worry if this doesn't make sense yet - we'll see it in action soon. 
 
-Thoroughly confused yet? Don't worry, this will make more sense when we see the implementation in just a bit. Let's go over our last method in `Router`. 
-
-The `process` method is in charge of figuring out what to do with a request. When `process` receives a request, it loops through the routes and uses regex to match the request path with one of the routes saved in our `routes` class variable. If it finds one it runs the function saved under `route['function']` (the code that needs to be run to generate the response). If it doesn't find a match, it returns a `404` response. 
+The `process` class method is in charge of figuring out what to do with a request. When `process` receives a request, it loops through the routes and uses regex to match the request path with one of the routes saved in our `routes` class variable. If it finds one, it runs the function saved under `route['function']` (the code that needs to be run to generate the response). If it doesn't find a match, it returns a `404` response. 
 
 Let's implement this router with the rest of our HTTP server application by first creating a file `controller.py` at the same level as `server.py`. This is where we will call the Router and handle incoming requestswrite the code that tells our router how to handle each request:
 
 ```Python
 # controller.py 
 
-from router import Router
+from classes.router import Router
 from classes.response import Response
 import datetime
 
-@Router.route('/hello')
+@Router.route('/')
 def index():
-    response = Response('hello')
+    response = Response('index')
     return response
 
 @Router.route('/time')
@@ -162,7 +158,7 @@ def time():
     return response
 ```
 
-Our controller will be where we store all the logic to process each request. Anytime we want to add a new route, we'll define it here. 
+Our controller will be where we store all the logic to process each request. Anytime we want to add a new route, we'll define it here.
 
 Then, in `server.py`, remove all the unnecessary libraries and `import` our new controller / router:
 
@@ -183,7 +179,7 @@ print(f'Serving HTTP on http://{HOST}:{PORT}')
 
 while True:
     client_connection, client_address = listen_socket.accept()
-    request = Request(request_text)
+    request = Request(client_connection)
     response = Router.process(request)
     client_connection.send(str(response).encode())
     client_connection.close()
