@@ -1,11 +1,11 @@
 # HTTP Server Two
 
 ## Release 1 - Templates
-Returning a hard-coded responses for every request isn't very useful, and generating HTML in Python is a bit of a chore. Fortunately, there's a Python library called Jinja2 that makes generating HTML much easier. Take a look at this introduction to [Jinja2](http://jinja.pocoo.org/docs/2.10/intro/) before continuing:
+Returning a hard-coded responses for every request isn't very useful, and generating HTML in Python is a bit of a chore. Fortunately, there's a Python library called Jinja2 that makes generating HTML much easier. Take a look at [this introduction](http://jinja.pocoo.org/docs/2.10/intro/) to Jinja2 before continuing.
 
-`Jinja` allows us to write `HTML` and run `Python` code in it before it gets rendered. Run `pip install Jinja2` in your terminal. 
+Jinja allows us to write `HTML` and interpolate `Python` code inside. Run `pip install Jinja2` in your terminal to get started.
 
-We'll start off by creating a `templates` directory and then creating a `Jinja` template for our `/time` route: `templates/time.html`. Then we write some boilerplate `HTML` and add an `<h1>` tag to display our time using brackets: `{{ time }}` The two brackets are special tags to let `Jinja2` know we want it to run/interpolate some Python code into the final HTML string. 
+We'll start off by creating a `templates` directory and then creating a Jinja template for our `/time` route: `templates/time.html`. Then we write some boilerplate `HTML` and add an `<h1>` tag to display our time using brackets: `{{ time }}` The two brackets are special tags to let `Jinja2` know we want it to run/interpolate some Python code into the final HTML string. 
 
 ```HTML
 <!-- templates/time.html -->
@@ -25,7 +25,7 @@ We'll start off by creating a `templates` directory and then creating a `Jinja` 
 </html>
 ```
 
-Ok, we have an HTML file. We need to pass that HTML into Jinja and pass in our `time` value to be interpolated and ultimately shown to the screen. Add `from jinja2 import Template` at the top of your `server.py` file and update the conditional statement to use `Jinja2`
+We need to pass this HTML file into Jinja and also pass in our `time` variable with the current datetime so that it can be interpolated. Add `from jinja2 import Template` at the top of your `server.py` file and update the conditional statement to use `Jinja2`
 
 ```Python
 # server.py 
@@ -38,12 +38,14 @@ Ok, we have an HTML file. We need to pass that HTML into Jinja and pass in our `
     client_connection.send(body_response.encode())
 ```
 
-Let's break down what's happening here. When a client makes a request to `/time`, the code inside our `elif` will run. First, we need to read out `time.html` file into a variable (`myfile`). After that, we pass the `html_from_file` to `Jinja2`'s  `Template()` function which makes a `Jinja` template for us. The Jinja template needs to interpolate the `time` variable, so we pass it in the `.render` function (`time=datetime.datetime.now()`). Finally, we send that fully built out HTML response to the user.
+Let's break down what's happening here. When a client makes a request to `/time`, the code inside our `elif` will run. First, we need to read the `time.html` file into a variable (`myfile`). After that, we pass the `html_from_file` to `Jinja2`'s  `Template()` function which makes a `Jinja` template for us. The Jinja template needs to interpolate the `time` variable, so we pass it in the `.render` function (`time=datetime.datetime.now()`). Finally, we send that fully built out HTML response to the user.
 
 Run the server and test the `/time` route via `curl` to make sure you're getting the proper `HTML` response. Then, try going to `http://localhost:9292/time` in your browser - this should be broken. Can you modify/utilize the `build_html_response` to get a proper response via the browser and curl? Do this before going forward!
 
-#### Refactor
-As we build more routes, we're going to have more `Jinja2` files and need to utilize helper methods. Let's make a new file, `utilities.py` to house our helper methods:
+Repeat this process for the `/` route - call this the `index` template.
+
+### Refactor
+As we build more routes, we're going to have more `Jinja2` files and will need to utilize helper methods. Let's make a new file, `utilities.py` to house our helper methods:
 
 ```Python
 # utilities.py 
@@ -59,6 +61,7 @@ Import these functions into `server.py`:
 
 ```Python
 # server.py
+...
 from utilities import *
 ...
 elif client_request.parsed_request['urn'] == '/time':
@@ -76,12 +79,12 @@ The flow we are working toward looks something like this:
 * It passes the request to the `Request` class which parses/cleans the data so that we can use it more easily.
 * The `Request` gets passed to the `Router`, who's job is to decide decode it and determine what kind of `Response` to send back
 * `Response` will creates an appropriate response with properly formated HTML to `server.py`
-* You get to see the response as usual
+* You see the response as HTML on your browser
 
 ## Release 2 - `Response` Class 
-Create a new file `response.py` and create a `Response` class. Some suggestions/pointers for your `Response` class:
-- It should be initialized with the URN string and a dictionary of possible template variables
-- Based off the URN string, it should be able to render a fully formatted Jinja HTML template using (if applicable) template variables
+Create a new file `response.py` and create a `Response`. Some suggestions/pointers for your `Response` class:
+- It should be initialized with the URN string and a dictionary of possible template variables. Be sure to account for the situation where there aren't any template variables in `Response`
+- Write a method `__str__` where, based off the URN string, it should be able to render a fully formatted Jinja HTML template using (if applicable) template variables 
 - You will probably end up stripping the methods you wrote in `utilities.py` to put into this class and deleting `utilities.py` altogether
     - Don't forget to remove unnecessary libraries from `server.py` when you strip out code
 
@@ -91,12 +94,13 @@ By the end of your refactor, your `server.py` should just include this tiny bit 
 # server.py 
 ...
 
-if client_request.parsed_request['urn'] == '/hello':
-    response = Response('hello')
+if client_request.parsed_request['urn'] == '/':
+    response = Response('index')
 elif client_request.parsed_request['urn'] == '/time':
     response = Response('time', {'time': datetime.datetime.now()})
 
 client_connection.send(str(response).encode()) # the __str__ method you wrote in the Response class
+client_connection.close()
 ```
 
 Let's refactor again before moving forward to the next section. Our `Response` and `Request` class is at the same level as our `server.py`, despite being custom classes that we need. Let's create a `classes` folder to house our two classes like the `templates` folder houses the templates. From there, change the `import` statements on `server.py` to account for the new location of your `Response` and `Request`.
