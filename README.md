@@ -3,13 +3,11 @@
 
 ## Release 1 - Templates
 
-Returning a hard-coded responses for every request isn't very useful, and generating HTML in Python is a bit of a chore. Fortunately, there's a Python library called Jinja2 that makes generating HTML much easier. Take a look at this introduction to ERB before continuing:
-
-[Jinja2 Intro](http://jinja.pocoo.org/docs/2.10/intro/)
+Returning a hard-coded responses for every request isn't very useful, and generating HTML in Python is a bit of a chore. Fortunately, there's a Python library called Jinja2 that makes generating HTML much easier. Take a look at this introduction to [Jinja2](http://jinja.pocoo.org/docs/2.10/intro/) before continuing:
 
 `Jinja` allows us to write `HTML` and run `Python` code in it before it gets rendered. Run `pip install Jinja2` in your terminal. 
 
-We'll start off by creating a `views` directory and then creating an `Jinja` template for our `/time` route: `views/time.html`. Then we write some boilerplate `HTML` and add an `<h1>` tag to display our time. 
+We'll start off by creating a `views` directory and then creating a `Jinja` template for our `/time` route: `views/time.html`. Then we write some boilerplate `HTML` and add an `<h1>` tag to display our time. 
 
 ##### More about `{{ time }} `
 We use special tags to let `Jinja2` know we want it to run some Python code. Wrapping a variable in brackets, `{{ my_variable }}`, tells `Jinja2` to evaluate the var and insert it into the final HTML string. 
