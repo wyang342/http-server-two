@@ -1,13 +1,11 @@
 # HTTP Server Two
 
-
 ## Release 1 - Templates
-
 Returning a hard-coded responses for every request isn't very useful, and generating HTML in Python is a bit of a chore. Fortunately, there's a Python library called Jinja2 that makes generating HTML much easier. Take a look at this introduction to [Jinja2](http://jinja.pocoo.org/docs/2.10/intro/) before continuing:
 
 `Jinja` allows us to write `HTML` and run `Python` code in it before it gets rendered. Run `pip install Jinja2` in your terminal. 
 
-We'll start off by creating a `templates` directory and then creating a `Jinja` template for our `/time` route: `templates/time.html`. Then we write some boilerplate `HTML` and add an `<h1>` tag to display our time. using brackets: `{{ time }}` The two brackets are special tags to let `Jinja2` know we want it to run/interpolate some Python code. Wrapping a variable in brackets, `{{ my_variable }}`, tells `Jinja2` to evaluate the variable and insert it into the final HTML string. 
+We'll start off by creating a `templates` directory and then creating a `Jinja` template for our `/time` route: `templates/time.html`. Then we write some boilerplate `HTML` and add an `<h1>` tag to display our time using brackets: `{{ time }}` The two brackets are special tags to let `Jinja2` know we want it to run/interpolate some Python code into the final HTML string. 
 
 ```HTML
 <!-- templates/time.html -->
@@ -27,11 +25,11 @@ We'll start off by creating a `templates` directory and then creating a `Jinja` 
 </html>
 ```
 
-Ok, we have some `HTML`. Now we need to use `Jinja2` to run the Python code and return a string that we can then send back to the client as our response body. Add `from jinja2 import Template` at the top of your `server.py` file. Then we can update our conditional statement to use `Jinja2`
+Ok, we have an HTML file. We need to pass that HTML into Jinja and pass in our `time` value to be interpolated and ultimately shown to the screen. Add `from jinja2 import Template` at the top of your `server.py` file and update the conditional statement to use `Jinja2`
 
 ```Python
 # server.py 
-
+...
  elif client_request.parsed_request['urn'] == '/time':
     with open(f'./templates/time.html', 'r') as myfile:
       html_from_file = myfile.read()
@@ -40,54 +38,55 @@ Ok, we have some `HTML`. Now we need to use `Jinja2` to run the Python code and 
     client_connection.send(body_response.encode())
 ```
 
-Let's break down what's happening here. When a client makes a request to `/time`, the code inside our `elif` will run. First, we need to read out `time.html` file into a variable (`myfile`). After that, we pass the `html_from_file` to `Jinja2`'s  `Template()` function which makes a `Jinja` template for us. The Jinja template interpolates the `time` variable, so we need to pass it in the `.render` function (`time=datetime.datetime.now()`).
+Let's break down what's happening here. When a client makes a request to `/time`, the code inside our `elif` will run. First, we need to read out `time.html` file into a variable (`myfile`). After that, we pass the `html_from_file` to `Jinja2`'s  `Template()` function which makes a `Jinja` template for us. The Jinja template needs to interpolate the `time` variable, so we pass it in the `.render` function (`time=datetime.datetime.now()`). Finally, we send that fully built out HTML response to the user.
 
-Run the server and test the `/time` route via `curl` to make sure you're getting the proper `HTML` response. Then, try going to `http://localhost:9292/time` in your browser - this should be broken. Can you modify/utilize the `build_html_response` to get a proper response via the browser and curl? Do this before going forward
+Run the server and test the `/time` route via `curl` to make sure you're getting the proper `HTML` response. Then, try going to `http://localhost:9292/time` in your browser - this should be broken. Can you modify/utilize the `build_html_response` to get a proper response via the browser and curl? Do this before going forward!
 
 #### Refactor
-As we build more routes, we're going to have more `Jinja2` files, and ultimately we are going to have more Python helper methods. Let's make a new file, `utilities.py` to house our logic for getting a template and generating HTML code. This file will house our helper methods.
+As we build more routes, we're going to have more `Jinja2` files and need to utilize helper methods. Let's make a new file, `utilities.py` to house our helper methods:
 
 ```Python
 # utilities.py 
 def get_template(path):
-    with open(f'./views/{path}.html', 'r') as myfile:
+    with open(f'./templates/{path}.html', 'r') as myfile:
         return myfile.read()
 
 def build_html_response(text_body):
   # your code here
 ```
 
-And then we can import these functions in `server.py`: 
+Import these functions into `server.py`: 
 
 ```Python
 # server.py
 from utilities import *
 ...
-elif request.path == '/time':
+elif client_request.parsed_request['urn'] == '/time':
   view = Template(get_template('time'))
-  body_response = build_html_response(view.render(date=datetime.datetime.now()))
+  body_response = build_html_response(view.render(time=datetime.datetime.now()))
   client_connection.send(body_response.encode())
 ```
 
-We should be able to call `get_view` in any of our routes and pass it the file we want. Soon we are going to start adding the ability to read and save data from a database (we'll use a `csv` file for this) but before we do that, let's address two problems with how our code is organized. 
+As we pause for a second to look at our code, we have to address 2 things regarding its future organization:
+* First, we want to create a `Response` class because our responses are going to get more elaborate
+* Second, our if/elif statement for URNs is going to become cumbersome to work with as it grows. We need to create a `Router` class to handle reading each request and deciding how to respond (using the `Response` class)
 
-First, our responses are getting more elaborate, so we should create a class to handle creating responses. 
+The flow we are working toward looks something like this:
+* `server.py` receives an HTTP request (a string)
+* It passes the request to the `Request` class which parses/cleans the data so that we can use it more easily.
+* The `Request` gets passed to the `Router`, who's job is to decide decode it and determine what kind of `Response` to send back
+* `Response` will creates an appropriate response with properly formated HTML to `server.py`
+* You get to see the response as usual
 
-The second problem is that our conditional statement is going to become cumbersome to work with as it grows, so we'll need to create a `Router` class to handle reading the request and deciding how to respond. 
-
-The flow we are working toward looks something like this: 
-
-The server receives an HTTP request string. It passes the HTTP request string to the `Request` class which parses it and makes it easier for Python to deal with. After that, the request gets passed to the router. The router's job is to decide what to do with the request and create a response. The response is passed back to the server, which serves the response to the client. 
-
-## Release 2 - Response Class 
-
-Create a new file `response.py` and write the code for a class that will hold all the data for our response. Define be sure to define a `__str__()`. Remember, HTTP responses need to be strings. When your done, refactor your code in `server.py` to look something like this: 
+## Release 2 - `Response` Class 
+Create a new file `response.py` and write the a method `__str__` for your `Response` class that will hold/create the data for your response. Remember, HTTP responses need to be strings. When you're done, refactor the code in `server.py` to utilize the `Response` class:
 
 ```Python
 # server.py 
+...
 
-if request.path == '/hello':
-  view = Template(get_view('index'))
+if client_request.parsed_request['urn'] == '/hello':
+  view = Template(get_template('index'))
   body_response = view.render()
 
   response = Response()
@@ -95,11 +94,10 @@ if request.path == '/hello':
   response.content_type = 'text/html'
   response.body = body_response
   
-  client_connection.send(str(response).encode())
+  client_connection.send(str(response).encode()) # the __str__ method you wrote earlier
 ```
 
-## Release 3 - Router 
-
+## Release 3 - Router
 This release will challenge you if you aren't comfortable with decorators in Python. These two articles are a great reference:[Primer on Python Decorators](https://realpython.com/primer-on-python-decorators/) and [Decorators In Python: What You Need To Know](https://timber.io/blog/decorators-in-python/)
 
 Don't get discouraged if decorators don't make sense right away. Hopefully working with them here will help you get a handle on how they work. They're implementation here is based the way [Flask](http://flask.pocoo.org/docs/0.12/quickstart/) handles routing, though pared down quite a bit. You may not end up using decorators that much when you're just starting out, but you will certainly see them around, and it will be good to have an idea how they work. 
