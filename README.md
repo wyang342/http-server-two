@@ -7,13 +7,10 @@ Returning a hard-coded responses for every request isn't very useful, and genera
 
 `Jinja` allows us to write `HTML` and run `Python` code in it before it gets rendered. Run `pip install Jinja2` in your terminal. 
 
-We'll start off by creating a `views` directory and then creating a `Jinja` template for our `/time` route: `views/time.html`. Then we write some boilerplate `HTML` and add an `<h1>` tag to display our time. 
-
-##### More about `{{ time }} `
-We use special tags to let `Jinja2` know we want it to run some Python code. Wrapping a variable in brackets, `{{ my_variable }}`, tells `Jinja2` to evaluate the var and insert it into the final HTML string. 
+We'll start off by creating a `templates` directory and then creating a `Jinja` template for our `/time` route: `templates/time.html`. Then we write some boilerplate `HTML` and add an `<h1>` tag to display our time. using brackets: `{{ time }}` The two brackets are special tags to let `Jinja2` know we want it to run/interpolate some Python code. Wrapping a variable in brackets, `{{ my_variable }}`, tells `Jinja2` to evaluate the variable and insert it into the final HTML string. 
 
 ```HTML
-<!-- views/time.html.erb -->
+<!-- templates/time.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -35,40 +32,44 @@ Ok, we have some `HTML`. Now we need to use `Jinja2` to run the Python code and 
 ```Python
 # server.py 
 
- elif request.path == '/time':
-    with open(f'./views/time.html', 'r') as myfile:
-      view = myfile.read()
-    
-    template = Template(view)
-    
-    body_response = template.render(date=datetime.datetime.now())
-
+ elif client_request.parsed_request['urn'] == '/time':
+    with open(f'./templates/time.html', 'r') as myfile:
+      html_from_file = myfile.read()
+    template = Template(html_from_file)
+    body_response = template.render(time=datetime.datetime.now())
+    client_connection.send(body_response.encode())
 ```
-Let's break down what's happening here. When a client makes a request to `/time` the code inside our `elif` will run. First, we need to read out `time.html` file into a variable. After that we pass the `html` to `Jinja2`'s  `Template()` function which makes a `Jinja` template for us. Lastly, we call `.render` and pass it any variables we want to use in the template. So here we pass `date=datetime.datetime.now()`. Inside of our html file we have `{{ date }}`, which `Jinja2` will render to read the value of the variable we passed in. 
 
-Run the server and test the `/time` route. Test it with `curl` to make sure you're getting the `HTML` response. Then, try going to `http://localhost:9292/time` in your browser. You should see the date and time show up. 
+Let's break down what's happening here. When a client makes a request to `/time`, the code inside our `elif` will run. First, we need to read out `time.html` file into a variable (`myfile`). After that, we pass the `html_from_file` to `Jinja2`'s  `Template()` function which makes a `Jinja` template for us. The Jinja template interpolates the `time` variable, so we need to pass it in the `.render` function (`time=datetime.datetime.now()`).
 
-####Refactor
-As we build more routes, we're going to have more `Jinja2` files, which means we'll have to keep retrieving them from our `/views` directory. Let's make a new file `utilities.py` and put our logic for getting a view into a method so we can reuse it. 
+Run the server and test the `/time` route via `curl` to make sure you're getting the proper `HTML` response. Then, try going to `http://localhost:9292/time` in your browser - this should be broken. Can you modify/utilize the `build_html_response` to get a proper response via the browser and curl? Do this before going forward
+
+#### Refactor
+As we build more routes, we're going to have more `Jinja2` files, and ultimately we are going to have more Python helper methods. Let's make a new file, `utilities.py` to house our logic for getting a template and generating HTML code. This file will house our helper methods.
 
 ```Python
 # utilities.py 
-def get_view(path):
-  with open(f'./views/{path}.html', 'r') as myfile:
-        data = myfile.read()
-  return data
+def get_template(path):
+    with open(f'./views/{path}.html', 'r') as myfile:
+        return myfile.read()
+
+def build_html_response(text_body):
+  # your code here
 ```
-And then we can require this file and use this function in our server. 
+
+And then we can import these functions in `server.py`: 
 
 ```Python
-# server.py 
+# server.py
+from utilities import *
+...
 elif request.path == '/time':
-  view = Template(get_view('time'))
-  body_response = view.render(date=datetime.datetime.now())
-
+  view = Template(get_template('time'))
+  body_response = build_html_response(view.render(date=datetime.datetime.now()))
+  client_connection.send(body_response.encode())
 ```
 
-Now we should be able to call `get_view` in any of our routes and pass it the file we want. Soon we are going to start adding the ability to read and save data from a database (we'll use a `csv` file for this) but before we do that, let's address two problems with how our code is organized. 
+We should be able to call `get_view` in any of our routes and pass it the file we want. Soon we are going to start adding the ability to read and save data from a database (we'll use a `csv` file for this) but before we do that, let's address two problems with how our code is organized. 
 
 First, our responses are getting more elaborate, so we should create a class to handle creating responses. 
 
