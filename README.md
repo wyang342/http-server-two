@@ -79,167 +79,110 @@ The flow we are working toward looks something like this:
 * You get to see the response as usual
 
 ## Release 2 - `Response` Class 
-Create a new file `response.py` and write the a method `__str__` for your `Response` class that will hold/create the data for your response. Remember, HTTP responses need to be strings. When you're done, refactor the code in `server.py` to utilize the `Response` class:
+Create a new file `response.py` and create a `Response` class. Some suggestions/pointers for your `Response` class:
+- It should be initialized with the URN string and a dictionary of possible template variables
+- Based off the URN string, it should be able to render a fully formatted Jinja HTML template using (if applicable) template variables
+- You will probably end up stripping the methods you wrote in `utilities.py` to put into this class and deleting `utilities.py` altogether
+    - Don't forget to remove unnecessary libraries from `server.py` when you strip out code
+
+By the end of your refactor, your `server.py` should just include this tiny bit of code:
 
 ```Python
 # server.py 
 ...
 
 if client_request.parsed_request['urn'] == '/hello':
-  view = Template(get_template('index'))
-  body_response = view.render()
+    response = Response('hello')
+elif client_request.parsed_request['urn'] == '/time':
+    response = Response('time', {'time': datetime.datetime.now()})
 
-  response = Response()
-  response.status = 200
-  response.content_type = 'text/html'
-  response.body = body_response
-  
-  client_connection.send(str(response).encode()) # the __str__ method you wrote earlier
+client_connection.send(str(response).encode()) # the __str__ method you wrote in the Response class
 ```
 
+Let's refactor again before moving forward to the next section. Our `Response` and `Request` class is at the same level as our `server.py`, despite being custom classes that we need. Let's create a `classes` folder to house our two classes like the `templates` folder houses the templates. From there, change the `import` statements on `server.py` to account for the new location of your `Response` and `Request`.
+
 ## Release 3 - Router
-This release will challenge you if you aren't comfortable with decorators in Python. These two articles are a great reference:[Primer on Python Decorators](https://realpython.com/primer-on-python-decorators/) and [Decorators In Python: What You Need To Know](https://timber.io/blog/decorators-in-python/)
+This release will introduce you to decorators in Python. These two articles are a great reference: [Primer on Python Decorators](https://realpython.com/primer-on-python-decorators/) and [Decorators In Python: What You Need To Know](https://timber.io/blog/decorators-in-python/)
 
-Don't get discouraged if decorators don't make sense right away. Hopefully working with them here will help you get a handle on how they work. They're implementation here is based the way [Flask](http://flask.pocoo.org/docs/0.12/quickstart/) handles routing, though pared down quite a bit. You may not end up using decorators that much when you're just starting out, but you will certainly see them around, and it will be good to have an idea how they work. 
+Don't get discouraged if decorators don't make sense right away. Hopefully working with them here will help you get a handle on how they work. Their implementation in this challenge is based the way [Flask](http://flask.pocoo.org/docs/0.12/quickstart/) handles routing, though pared down quite a bit. You may not end up using decorators that much when you're just starting out, but you will certainly see them around.
 
-Create a file `router.py` and add the following code. 
+Create a file `classes/router.py` and add the following code: 
 
 ```Python
-# router.py 
-import re 
+import re
 
 class Router:
- 
   routes = []
 
   @classmethod 
   def route(self, path, method='get'):
-    def add_to_routes(f):
-      r = {'path': path, 'process': f, 'method': method}
-      self.routes.append(r)
-   
+    def add_to_routes(function):
+      route = {'path': path, 'function': function, 'method': method}
+      self.routes.append(route)
     return add_to_routes
 
   @classmethod
   def process(self, request):
     for route in self.routes:
       if re.search(route['path'], request.path)and route['method'].lower() == request.method.lower():
-        return route['process']()
+        return route['function']()
       else 
         return 'HTTP/1.1 404 Not Found \r\n'
 ```
 
-First we have our class. Rather than creating instances of our class, we are going to have the class itself handle all the routes. We create a class variable `routes` that will hold all of the routes we want our server to accept. So instead of our if statement, `if '/'`, `if '/time'`, `if '/facts'`, we'll have a list of hashes. Each route will look something like this: `{ 'method': 'GET', 'path': '/', 'process': a function that knows how to create an appropriate response }`. 
+First, we have our class which will handle all the routes at the class level instead of at the instance level. Then, we create a class variable `routes` that will hold all of the routes we want our server to accept. 
 
-Next we have our `route` function. This function is responsible for loading routes into our `routes` class variable. We will call this function every time we want to create a new route. Inside of route we define another function that creates a dictionary with the path and http method. You'll notice that `add_to_routes` takes in it's own argument. This variable will be replaced with whatever function we declare under our decorator. 
+Next we have our `route` function. This function is responsible for loading routes into our `routes` class variable. We will call this function every time we want to **create** a new route. Inside of `route`, we define another function `add_to_routes` which adds all the necessary route information (as a dictionary) to the class variable `routes`.
 
-Here are two implementations of the same idea. The first is what we are doing, using decorators. The second will work just as well. 
+Thoroughly confused yet? Don't worry, this will make more sense when we see the implementation in just a bit. Let's go over our last method in `Router`. 
 
-```Python 
-@Router.route('/')
-def index():
-  view = Template(get_view('index'))
-  body_response = view.render()
+The `process` method is in charge of figuring out what to do with a request. When `process` receives a request, it loops through the routes and uses regex to match the request path with one of the routes saved in our `routes` class variable. If it finds one it runs the function saved under `route['function']` (the code that needs to be run to generate the response). If it doesn't find a match, it returns a `404` response. 
 
-  response = Response()
-  response.status = 200
-  response.body = body_response
-
-  return response
-
-# This is the same as saying: 
-
-def index():
-  view = Template(get_view('index'))
-  body_response = view.render()
-
-  response = Response()
-  response.status = 200
-  response.body = body_response
-
-  return response
-
-add_to_routes('/', 'get', index)
-
-```
-
-This might make more sense when we see the implementation in a little bit. First, let's quickly go over our last method in `Router`. 
-
-`process` is in charge of figuring out what to do with a request. When it receives a request, it loops through the routes and uses regex to match the request path with one of the routes saved in our `routes` class variable. If it finds one it runs the function saved under `route['process']` (the code that needs to be run to generate the response). If it doesn't find a match, it returns a `404` not found response. 
-
-That was a lot. If you're confused, don't worry. Read through the rest of the release and then feel free to go back and play with the code to get a better understanding of how it works. 
-
-Let's look at the implementation of the router class. Create a file `controller.py`. This is where we will write the code that tells our router how to handle each request. 
+Let's implement this router with the rest of our HTTP server application by first creating a file `controller.py` at the same level as `server.py`. This is where we will call the Router and handle incoming requestswrite the code that tells our router how to handle each request:
 
 ```Python
 # controller.py 
 
 from router import Router
-from jinja2 import Template
-from utilities import get_view
-from response import Response
+from classes.response import Response
 import datetime
 
 @Router.route('/hello')
 def index():
-  view = Template(get_view('index'))
-  body_response = view.render()
-
-  response = Response()
-  response.status = 200
-  response.body = body_response
-
-  return response
+    response = Response('hello')
+    return response
 
 @Router.route('/time')
 def time():
-  view = Template(get_view('time'))
-  body_response = view.render(date=datetime.datetime.now())
-  
-  response = Response()
-  response.status = 200
-  response.body = body_response
-
-  return response
-  
+    response = Response('time', {'time': datetime.datetime.now()})
+    return response
 ```
-Our controller will be where we store all the logic to process each request. Anytime we want to add a new route, we'll define it here. We can move our `import` statements for `jinja2`, `utilities`, `response`, and `datetime` here and delete them from `server.py`
 
-Then, in `server.py`, we can `import` our controller and router and put them to good use for us. 
+Our controller will be where we store all the logic to process each request. Anytime we want to add a new route, we'll define it here. 
 
+Then, in `server.py`, remove all the unnecessary libraries and `import` our new controller / router:
 
 ```Python
 # server.py
-from request import Request
-from router import Router
-
-import controller 
+from classes.request import Request
+from classes.router import Router
+import controller
 import socket
 
 # create a server listening on port 8888
-HOST, PORT = '', 8888
+HOST, PORT = 'localhost', 8888
 
 listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 listen_socket.bind((HOST, PORT))
 listen_socket.listen(1)
-print('Serving HTTP on port %s ...' % PORT)
+print(f'Serving HTTP on http://{HOST}:{PORT}')
 
 while True:
-  
     client_connection, client_address = listen_socket.accept()
-    # we listen for a request. Then we need to convert it from bytes to a string with decode. 
-    request_text = client_connection.recv(1024).decode('utf-8')
     request = Request(request_text)
- 
     response = Router.process(request)
-   
-    client_connection.send( str(response).encode() )
-
+    client_connection.send(str(response).encode())
     client_connection.close()
-
 ```
-Our server is looking much cleaner now. All it does is take in a request and then serve back a response. You should still be able to run the server as before. 
 
-Up to this point we've only been handling `GET` requests. In the next challenge we'll learn how to access parameters sent to us by the client, and save data based on the request. 
-
-
+Our server is looking much cleaner now. All it does is take in a request and then serve back a response. You should still be able to run the server as before.
