@@ -30,7 +30,7 @@ We need to pass this HTML file into Jinja and also pass in our `time` variable w
 ```Python
 # server.py 
 ...
- elif client_request.parsed_request['urn'] == '/time':
+ elif client_request.parsed_request['uri'] == '/time':
     with open(f'./templates/time.html', 'r') as myfile:
       html_from_file = myfile.read()
     template = Template(html_from_file)
@@ -64,7 +64,7 @@ Import these functions into `server.py`:
 ...
 from utilities import *
 ...
-elif client_request.parsed_request['urn'] == '/time':
+elif client_request.parsed_request['uri'] == '/time':
   view = Template(get_template('time'))
   body_response = build_html_response(view.render(time=datetime.datetime.now()))
   client_connection.send(body_response.encode())
@@ -94,9 +94,9 @@ By the end of your refactor, your `server.py` should just include this tiny bit 
 # server.py 
 ...
 
-if client_request.parsed_request['urn'] == '/':
+if client_request.parsed_request['uri'] == '/':
     response = Response('index')
-elif client_request.parsed_request['urn'] == '/time':
+elif client_request.parsed_request['uri'] == '/time':
     response = Response('time', {'time': datetime.datetime.now()})
 
 client_connection.send(str(response).encode()) # the __str__ method you wrote in the Response class
@@ -127,7 +127,7 @@ class Router:
   def process(self, request):
     parsed_request = request.parsed_request
     for route in self.routes:
-      if route['path'] == parsed_request['urn'] and route['method'].lower() == parsed_request['method'].lower():
+      if route['path'] == parsed_request['uri'] and route['method'].lower() == parsed_request['method'].lower():
         return route['function']()
     return 'HTTP/1.1 404 Not Found \r\n'
 ```
