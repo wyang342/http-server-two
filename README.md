@@ -27,12 +27,12 @@ We'll start off by creating a `templates` directory and then creating a Jinja te
 
 We need to pass this HTML file into Jinja and also pass in our `time` variable with the current datetime so that it can be interpolated. Add `from jinja2 import Template` at the top of your `server.py` file and update the conditional statement to use `Jinja2`
 
-```Python
+```python
 # server.py 
 ...
- elif client_request.parsed_request['uri'] == '/time':
+elif client_request.parsed_request['uri'] == '/time':
     with open(f'./templates/time.html', 'r') as myfile:
-      html_from_file = myfile.read()
+        html_from_file = myfile.read()
     template = Template(html_from_file)
     body_response = template.render(time=datetime.datetime.now())
     client_connection.send(body_response.encode())
@@ -44,8 +44,8 @@ Run the server and test the `/time` route via `curl` to make sure you're getting
 
 Repeat this process for the `/` route - call this the `index` template.
 
-### Refactor
-As we build more routes, we're going to have more `Jinja2` files and will need to utilize helper methods. Let's make a new file, `utilities.py` to house our helper methods:
+#### Refactor!
+As we build more routes, we're going to have more `Jinja2` files and will need to utilize helper methods. Let's make a new file, `utilities.py` to house these helper methods:
 
 ```Python
 # utilities.py 
@@ -70,21 +70,21 @@ elif client_request.parsed_request['uri'] == '/time':
   client_connection.send(body_response.encode())
 ```
 
-As we pause for a second to look at our code, we have to address 2 things regarding its future organization:
-* First, we want to create a `Response` class because our responses are going to get more elaborate
-* Second, our if/elif statement for URNs is going to become cumbersome to work with as it grows. We need to create a `Router` class to handle reading each request and deciding how to respond (using the `Response` class)
+Ah, a bit more breathing room. Let's pause for a second to look at our code and plan its future:
+* `server.py` passed off the `Request` responsibility to another class but it's doing everything with the `Response` right now. We want to create a `Response` class soon to keep to the single responsibility principle.
+* Our `if/elif` statement for URIs is going to become cumbersome to work with as it grows. We need to create a `Router` class to handle reading each request and deciding how to respond (using the `Response` class)
 
 The flow we are working toward looks something like this:
 * `server.py` receives an HTTP request (a string)
-* It passes the request to the `Request` class which parses/cleans the data so that we can use it more easily.
+* It passes the request to the `Request` class which parses/cleans the data so that we can use it more easily
 * The `Request` gets passed to the `Router`, who's job is to decide decode it and determine what kind of `Response` to send back
 * `Response` will creates an appropriate response with properly formated HTML to `server.py`
 * You see the response as HTML on your browser
 
-## Release 2 - `Response` Class 
-Create a new file `response.py` and create a `Response`. Some suggestions/pointers for your `Response` class:
-- It should be initialized with the URN string and a dictionary of possible template variables. Be sure to account for the situation where there aren't any template variables in `Response`
-- Write a method `__str__` where, based off the URN string, it should be able to render a fully formatted Jinja HTML template using (if applicable) template variables 
+## Release 2 - The `Response` Class 
+Create a new file `response.py` and create the `Response` class. Some suggestions/pointers for your `Response` class:
+- It should be initialized with the URI string and a dictionary of possible template variables. Be sure to account for the situation where there aren't any template variables in `Response`
+- Write a method `__str__` where, based off the URN string, it should be able to render a fully formatted Jinja HTML template using template variables (if applicable)
 - You will probably end up stripping the methods you wrote in `utilities.py` to put into this class and deleting `utilities.py` altogether
     - Don't forget to remove unnecessary libraries from `server.py` when you strip out code
 
@@ -93,7 +93,6 @@ By the end of your refactor, your `server.py` should just include this tiny bit 
 ```Python
 # server.py 
 ...
-
 if client_request.parsed_request['uri'] == '/':
     response = Response('index')
 elif client_request.parsed_request['uri'] == '/time':
@@ -105,7 +104,9 @@ client_connection.close()
 
 Let's refactor again before moving forward to the next section. Our `Response` and `Request` class is at the same level as our `server.py`, despite being custom classes that we need. Let's create a `classes` folder to house our two classes like the `templates` folder houses the templates. From there, change the `import` statements on `server.py` to account for the new location of your `Response` and `Request`.
 
-## Release 3 - Router
+**Ensure that everything works like it used to before moving forward**
+
+## Release 3 - The Router Class
 This release will introduce you to decorators in Python. These two articles are a great reference: [Primer on Python Decorators](https://realpython.com/primer-on-python-decorators/) and [Decorators In Python: What You Need To Know](https://timber.io/blog/decorators-in-python/)
 
 Don't get discouraged if decorators don't make sense right away. Hopefully working with them here will help you get a handle on how they work. Their implementation in this challenge is based the way [Flask](http://flask.pocoo.org/docs/0.12/quickstart/) handles routing, though pared down quite a bit. You may not end up using decorators that much when you're just starting out, but you will certainly see them around.
@@ -134,15 +135,14 @@ class Router:
 
 First, we have our class which will handle all the routes at the class level instead of at the instance level. Then, we create a class variable `routes` that will hold all of the routes we want our server to accept. 
 
-Next we have our `route` class method. This is responsible for loading routes into our `routes` class variable. We will call this function every time we want to **create** a new route. Inside of `route` is another function, `add_to_routes`, which adds all the necessary route information (as a dictionary) to the `routes` class variable. Don't worry if this doesn't make sense yet - we'll see it in action soon. 
+Next we have our `route` class method. This is responsible for loading routes into our `routes` class variable. We will call this function every time we want to **create** a new route. Inside of `route` is another function, `add_to_routes`, which adds all the necessary route information (as a dictionary) to the `routes` class variable. Don't worry if this doesn't make sense yet - we'll see it in action soon.
 
-The `process` class method is in charge of figuring out what to do with a request. When `process` receives a request, it loops through the routes and uses regex to match the request path with one of the routes saved in our `routes` class variable. If it finds one, it runs the function saved under `route['function']` (the code that needs to be run to generate the response). If it doesn't find a match, it returns a `404` response. 
+The `process` class method is in charge of figuring out what to do with a request. When `process` receives a request, it loops through the routes and sees if the request path matches any of the routes in the class variable. If it finds one, it runs the function saved under `route['function']` (the code that needs to be run to generate the response). If it doesn't find a match, it returns a `404` response.
 
 Let's implement this router with the rest of our HTTP server application by first creating a file `controller.py` at the same level as `server.py`. This is where we will call the Router and handle incoming requestswrite the code that tells our router how to handle each request:
 
 ```Python
 # controller.py 
-
 from classes.router import Router
 from classes.response import Response
 import datetime
