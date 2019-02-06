@@ -10,5 +10,3 @@ class Request:
       for row in request_as_list[1:-2]:
         split_list = row.split(': ')
         self.parsed_request[split_list[0]] = split_list[1]
-
-
