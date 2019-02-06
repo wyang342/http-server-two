@@ -13,8 +13,8 @@ while True:
     server.listen()
     client_connection, _client_address = server.accept()
     client_request = Request(client_connection)
-    if client_request.parsed_request['urn'] == '/':
+    if client_request.parsed_request['uri'] == '/':
         client_connection.send(build_html_response('Hello World').encode())
-    elif client_request.parsed_request['urn'] == '/time':
+    elif client_request.parsed_request['uri'] == '/time':
         client_connection.send(build_html_response(datetime.datetime.now()).encode())
     client_connection.close()
