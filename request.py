@@ -5,7 +5,7 @@ class Request:
     def parse_request(self, request_as_list):
       self.parsed_request = {
         'method': request_as_list[0].split(' ')[0],
-        'urn': request_as_list[0].split(' ')[1],
+        'uri': request_as_list[0].split(' ')[1],
       }
       for row in request_as_list[1:-2]:
         split_list = row.split(': ')
