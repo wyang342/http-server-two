@@ -139,7 +139,7 @@ Next we have our `route` class method. This is responsible for loading routes in
 
 The `process` class method is in charge of figuring out what to do with a request. When `process` receives a request, it loops through the routes and sees if the request path matches any of the routes in the class variable. If it finds one, it runs the function saved under `route['function']` (the code that needs to be run to generate the response). If it doesn't find a match, it returns a `404` response.
 
-Let's implement this router with the rest of our HTTP server application by first creating a file `controller.py` at the same level as `server.py`. This is where we will call the Router and handle incoming requestswrite the code that tells our router how to handle each request:
+Let's implement this router with the rest of our HTTP server application by first creating a file `controller.py` at the same level as `server.py`. This is where we will call the Router and handle incoming requests / write the code that tells our router how to handle each request:
 
 ```Python
 # controller.py 
