@@ -1,11 +1,25 @@
 # HTTP Server Two
 
 ## Release 1 - Templates
-Returning a hard-coded responses for every request isn't very useful, and generating HTML in Python is a bit of a chore. Fortunately, there's a Python library called Jinja2 that makes generating HTML much easier. Take a look at [this introduction](http://jinja.pocoo.org/docs/2.10/intro/) to Jinja2 before continuing.
+Returning hard-coded responses for every request isn't very useful and generating HTML in Python is a bit of a chore. Fortunately, there's a Python library called [Jinja2](http://jinja.pocoo.org/docs/2.10/intro/) that makes generating HTML much easier.
 
-Jinja allows us to write `HTML` and interpolate `Python` code inside. Run `pip install Jinja2` in your terminal to get started.
+Jinja allows us to write HTML and interpolate Python code inside. To get started today, run the following commands after cloning this repo:
 
-We'll start off by creating a `templates` directory and then creating a Jinja template for our `/time` route: `templates/time.html`. Then we write some boilerplate `HTML` and add an `<h1>` tag to display our time using brackets: `{{ time }}` The two brackets are special tags to let `Jinja2` know we want it to run/interpolate some Python code into the final HTML string. 
+```sh
+$ python -m venv venv
+$ source venv/bin/activate
+$ pip install Jinja2
+```
+
+As our applications get larger and larger, we need to organize our files within folders. In Django, all HTML files are nested within a `templates` directory. Let create that:
+
+```sh
+$ mkdir templates
+$ cd templates
+$ touch time.html
+```
+
+We should have an HTML file for our `/time` route: `templates/time.html`:
 
 ```HTML
 <!-- templates/time.html -->
@@ -25,11 +39,13 @@ We'll start off by creating a `templates` directory and then creating a Jinja te
 </html>
 ```
 
-We need to pass this HTML file into Jinja and also pass in our `time` variable with the current datetime so that it can be interpolated. Add `from jinja2 import Template` at the top of your `server.py` file and update the conditional statement to use `Jinja2`
+We've got an HTML file with a twist: `{{ time }}`. The two curly braces are to interpolate a `time` variable that we pass in using Python/Jinja.
 
+`server.py` should now read:
 ```python
-# server.py 
-...
+# at the top
+from jinja2 import Template
+#...
 elif client_request.parsed_request['uri'] == '/time':
     with open(f'./templates/time.html', 'r') as myfile:
         html_from_file = myfile.read()
@@ -37,6 +53,8 @@ elif client_request.parsed_request['uri'] == '/time':
     body_response = template.render(time=datetime.datetime.now())
     client_connection.send(body_response.encode())
 ```
+
+**start here**
 
 Let's break down what's happening here. When a client makes a request to `/time`, the code inside our `elif` will run. First, we need to read the `time.html` file into a variable (`myfile`). After that, we pass the `html_from_file` to `Jinja2`'s  `Template()` function which makes a `Jinja` template for us. The Jinja template needs to interpolate the `time` variable, so we pass it in the `.render` function (`time=datetime.datetime.now()`). Finally, we send that fully built out HTML response to the user.
 
