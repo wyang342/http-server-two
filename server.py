@@ -1,21 +1,20 @@
+# server.py
+from classes.request import Request
+from classes.router import Router
+import controller
 import socket
-import datetime
-from request import Request
 
-def build_html_response(text_body):
-  html_body = f"<html><head><title>An Example Page</title></head><body>{text_body}</body></html>"
-  return f"HTTP/1.1 200 OK\r\nContent-Type:text/html\r\nContent-Length:{len(html_body)}\r\n\r\n{html_body}"
+# create a server listening on port 8888
+HOST, PORT = 'localhost', 8888
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # so you don't have to change ports when restarting
-server.bind(('localhost', 9291))
+listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+listen_socket.bind((HOST, PORT))
+listen_socket.listen(1)
+print(f'Serving HTTP on http://{HOST}:{PORT}')
 
 while True:
-    server.listen()
-    client_connection, _client_address = server.accept()
-    client_request = Request(client_connection)
-    if client_request.parsed_request['uri'] == '/':
-        client_connection.send(build_html_response('Hello World').encode())
-    elif client_request.parsed_request['uri'] == '/time':
-        client_connection.send(build_html_response(datetime.datetime.now()).encode())
+    client_connection, client_address = listen_socket.accept()
+    request = Request(client_connection)
+    response = Router.process(request)
+    client_connection.send(str(response).encode())
     client_connection.close()
